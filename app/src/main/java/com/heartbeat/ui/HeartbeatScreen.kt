@@ -24,6 +24,7 @@ fun HeartbeatScreen(
     onListenModeChanged: (ListenMode) -> Unit,
     onPlayPauseClicked: () -> Unit,
     onStartStopStreamingClicked: () -> Unit,
+    onRequestPermissionsClicked: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -37,6 +38,16 @@ fun HeartbeatScreen(
 
         state.errorMessage?.let { error ->
             Text(text = error, color = MaterialTheme.colorScheme.error)
+        }
+
+        if (!state.hasRequiredPermissions) {
+            Text(
+                text = "Permissions missing: Bluetooth + Notifications",
+                color = MaterialTheme.colorScheme.error,
+            )
+            Button(onClick = onRequestPermissionsClicked) {
+                Text("Grant Permissions")
+            }
         }
 
         OutlinedTextField(
@@ -65,7 +76,7 @@ fun HeartbeatScreen(
 
         Button(
             onClick = onStartStopStreamingClicked,
-            enabled = state.canStartSession,
+            enabled = state.canStartSession && state.hasRequiredPermissions,
         ) {
             Text("Start / Stop Streaming")
         }

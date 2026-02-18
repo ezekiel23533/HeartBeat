@@ -60,4 +60,5 @@ dependencies {
     implementation("org.webrtc:google-webrtc:1.0.32006")
 
     testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }

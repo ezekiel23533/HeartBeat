@@ -50,6 +50,39 @@ class HeartbeatViewModel {
         _uiState.update { it.copy(currentBpm = bpm.coerceAtLeast(0)) }
     }
 
+    fun onPermissionStatusChanged(hasRequiredPermissions: Boolean) {
+        _uiState.update {
+            it.copy(
+                hasRequiredPermissions = hasRequiredPermissions,
+                shouldRequestPermissions = false,
+                errorMessage = if (hasRequiredPermissions) null else it.errorMessage,
+            )
+        }
+    }
+
+    /**
+     * Returns true when caller can proceed with streaming start/stop action.
+     * Returns false when caller must open runtime permission request flow first.
+     */
+    fun onStartStopRequested(): Boolean {
+        val state = _uiState.value
+        return if (state.hasRequiredPermissions) {
+            true
+        } else {
+            _uiState.update {
+                it.copy(
+                    shouldRequestPermissions = true,
+                    errorMessage = "Bluetooth and notification permissions are required.",
+                )
+            }
+            false
+        }
+    }
+
+    fun onPermissionRequestHandled() {
+        _uiState.update { it.copy(shouldRequestPermissions = false) }
+    }
+
     companion object {
         private const val MIN_SESSION_CODE_LENGTH = 6
     }
