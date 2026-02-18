@@ -40,7 +40,7 @@ class HeartbeatViewModel {
                 errorMessage = if (state == TransportState.FAILED) {
                     "Unable to connect. Check network and session code."
                 } else {
-                    current.errorMessage
+                    null
                 },
             )
         }

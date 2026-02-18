@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.webrtc.DataChannel
 import org.webrtc.IceCandidate
+import org.webrtc.MediaConstraints
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
+import org.webrtc.RtpReceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 
@@ -35,15 +37,18 @@ class WebRtcPeerTransport(
 
     private var peerConnection: PeerConnection? = null
     private var dataChannel: DataChannel? = null
+    private var signalingJob: Job? = null
 
     override suspend fun connect(sessionCode: String) {
+        disconnect()
+
         _connectionState.value = TransportState.CONNECTING
         signalingRepository.joinSession(sessionCode, localUserId)
 
         peerConnection = createPeerConnection()
-        dataChannel = peerConnection?.createDataChannel("heartbeat", DataChannel.Init())
+        dataChannel = peerConnection?.createDataChannel("heartbeat", DataChannel.Init())?.also(::registerDataChannelObserver)
 
-        scope.launch {
+        signalingJob = scope.launch {
             signalingRepository.incoming.collect { message ->
                 when (message) {
                     is SignalingMessage.Offer -> handleOffer(message)
@@ -61,17 +66,24 @@ class WebRtcPeerTransport(
     }
 
     override suspend fun disconnect() {
+        signalingJob?.cancel()
+        signalingJob = null
+
         dataChannel?.close()
         dataChannel = null
         peerConnection?.close()
         peerConnection = null
+
         signalingRepository.leaveSession()
         _connectionState.value = TransportState.IDLE
     }
 
     override suspend fun send(frame: HeartRateFrame) {
+        val channel = dataChannel ?: return
+        if (channel.state() != DataChannel.State.OPEN) return
+
         val payload = "${frame.bpm}|${frame.timestampMillis}|${frame.sourceUserId}|${frame.sequence}".encodeToByteArray()
-        dataChannel?.send(DataChannel.Buffer(payload.toByteBuffer(), false))
+        channel.send(DataChannel.Buffer(payload.toByteBuffer(), false))
     }
 
     private fun createPeerConnection(): PeerConnection? {
@@ -96,23 +108,21 @@ class WebRtcPeerTransport(
 
                 override fun onDataChannel(channel: DataChannel) {
                     dataChannel = channel
-                    channel.registerObserver(object : DataChannel.Observer {
-                        override fun onBufferedAmountChange(previousAmount: Long) = Unit
-                        override fun onStateChange() = Unit
-                        override fun onMessage(buffer: DataChannel.Buffer) {
-                            val bytes = ByteArray(buffer.data.remaining())
-                            buffer.data.get(bytes)
-                            parseFrame(bytes.decodeToString())?.let { _incomingFrames.tryEmit(it) }
-                        }
-                    })
+                    registerDataChannelObserver(channel)
                 }
 
                 override fun onSignalingChange(newState: PeerConnection.SignalingState) = Unit
+
                 override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState) {
                     _connectionState.value = when (newState) {
                         PeerConnection.IceConnectionState.CONNECTED,
                         PeerConnection.IceConnectionState.COMPLETED,
                         -> TransportState.CONNECTED
+
+                        PeerConnection.IceConnectionState.DISCONNECTED,
+                        PeerConnection.IceConnectionState.CLOSED,
+                        -> TransportState.IDLE
+
                         PeerConnection.IceConnectionState.FAILED -> TransportState.FAILED
                         else -> _connectionState.value
                     }
@@ -124,9 +134,21 @@ class WebRtcPeerTransport(
                 override fun onAddStream(stream: org.webrtc.MediaStream) = Unit
                 override fun onRemoveStream(stream: org.webrtc.MediaStream) = Unit
                 override fun onRenegotiationNeeded() = Unit
-                override fun onAddTrack(receiver: org.webrtc.RtpReceiver, streams: Array<out org.webrtc.MediaStream>) = Unit
+                override fun onAddTrack(receiver: RtpReceiver, streams: Array<out org.webrtc.MediaStream>) = Unit
             },
         )
+    }
+
+    private fun registerDataChannelObserver(channel: DataChannel) {
+        channel.registerObserver(object : DataChannel.Observer {
+            override fun onBufferedAmountChange(previousAmount: Long) = Unit
+            override fun onStateChange() = Unit
+            override fun onMessage(buffer: DataChannel.Buffer) {
+                val bytes = ByteArray(buffer.data.remaining())
+                buffer.data.get(bytes)
+                parseFrame(bytes.decodeToString())?.let { _incomingFrames.tryEmit(it) }
+            }
+        })
     }
 
     private fun createAndSendOffer() {
@@ -141,7 +163,7 @@ class WebRtcPeerTransport(
             override fun onCreateFailure(error: String?) {
                 _connectionState.value = TransportState.FAILED
             }
-        }, org.webrtc.MediaConstraints())
+        }, MediaConstraints())
     }
 
     private fun handleOffer(message: SignalingMessage.Offer) {
@@ -155,7 +177,7 @@ class WebRtcPeerTransport(
                 pc.setLocalDescription(BasicSdpObserver(), desc)
                 scope.launch { signalingRepository.publish(SignalingMessage.Answer(desc.description)) }
             }
-        }, org.webrtc.MediaConstraints())
+        }, MediaConstraints())
     }
 
     private fun handleAnswer(message: SignalingMessage.Answer) {
@@ -166,8 +188,9 @@ class WebRtcPeerTransport(
     }
 
     private fun parseFrame(payload: String): HeartRateFrame? {
-        val parts = payload.split("|")
+        val parts = payload.split('|')
         if (parts.size != 4) return null
+
         return HeartRateFrame(
             bpm = parts[0].toIntOrNull() ?: return null,
             timestampMillis = parts[1].toLongOrNull() ?: return null,
