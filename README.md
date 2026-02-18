@@ -26,12 +26,6 @@ Il signaling passa tramite Firebase Realtime Database (SDK Firebase), quindi i m
 - Canale notifiche dedicato: `heartbeat.session`
 - Azione rapida `Stop` dalla notifica
 - Supporto aggiornamento stato/BPM tramite intent di update
-- Integrazione pronta con il core service via `SessionForegroundNotifier` / `AndroidSessionForegroundNotifier`
-- Azione notifica `Stop` emette anche `ACTION_STOP_SESSION_REQUESTED` per permettere stop end-to-end della sessione
-- `AndroidSessionStopActionHandler` disponibile per collegare il broadcast di stop al tuo orchestratore app-layer
-- `AndroidHeartbeatSessionRuntime` offre un wiring unico (service + notifier + stop handler) con API `attach/start/stop/detach`
-- Manifest aggiornato con permessi BLE moderni (`BLUETOOTH_SCAN` / `BLUETOOTH_CONNECT`) e compatibilità legacy
-- Runtime permission flow is wired end-to-end in `MainActivity` via `ActivityResultContracts.RequestMultiplePermissions`, with result propagation to `HeartbeatViewModel`
 
 ## Package map
 

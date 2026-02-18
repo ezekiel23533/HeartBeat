@@ -54,5 +54,5 @@
 1. Add secure Firebase Database rules for session-scoped read/write.
 2. Add TURN servers for symmetric NAT scenarios.
 3. Persist and clean old signaling nodes to avoid repeated reads.
-4. Harden runtime permission denial/retry handling across OEM variants and deep-link recovery from Settings.
+4. Complete runtime BLE permission flow (scan/connect + Android 12+ permissions).
 5. Add instrumentation tests for background reconnection and audio continuity.

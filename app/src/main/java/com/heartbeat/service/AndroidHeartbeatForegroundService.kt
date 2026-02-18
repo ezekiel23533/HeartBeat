@@ -10,7 +10,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.core.app.ServiceCompat
 
 /**
  * Android foreground service shell that keeps the app process alive while an active heartbeat
@@ -45,26 +44,24 @@ class AndroidHeartbeatForegroundService : Service() {
                 )
             }
 
-            ACTION_STOP -> {
-                sendBroadcast(stopRequestedIntent(packageName))
-                stopAndRemoveNotification()
-            }
+            ACTION_STOP -> stopAndRemoveNotification()
         }
 
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun startAsForeground(sessionCode: String) {
         val notification = buildNotification(sessionCode = sessionCode, state = "Connecting", bpm = -1)
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, 0)
+        startForeground(NOTIFICATION_ID, notification)
     }
 
     private fun updateNotification(sessionCode: String, state: String, bpm: Int) {
-        val normalizedSession = sessionCode.trim().uppercase()
-        val notification = buildNotification(sessionCode = normalizedSession, state = state, bpm = bpm)
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        notificationManager.notify(
+            NOTIFICATION_ID,
+            buildNotification(sessionCode = sessionCode, state = state, bpm = bpm),
+        )
     }
 
     private fun stopAndRemoveNotification() {
@@ -101,7 +98,7 @@ class AndroidHeartbeatForegroundService : Service() {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(contentIntent)
-            .addAction(android.R.drawable.ic_media_pause, "Stop", stopIntent)
+            .addAction(0, "Stop", stopIntent)
             .build()
     }
 
@@ -127,7 +124,6 @@ class AndroidHeartbeatForegroundService : Service() {
         private const val ACTION_START = "com.heartbeaten.action.START_FOREGROUND"
         private const val ACTION_UPDATE_STATE = "com.heartbeaten.action.UPDATE_STATE"
         private const val ACTION_STOP = "com.heartbeaten.action.STOP_FOREGROUND"
-        const val ACTION_STOP_REQUESTED = "com.heartbeaten.action.STOP_SESSION_REQUESTED"
 
         private const val EXTRA_SESSION_CODE = "extra_session_code"
         private const val EXTRA_STATE = "extra_state"
@@ -138,7 +134,7 @@ class AndroidHeartbeatForegroundService : Service() {
                 .setAction(ACTION_START)
                 .putExtra(EXTRA_SESSION_CODE, sessionCode)
 
-        fun updateIntent(context: Context, sessionCode: String, state: String, bpm: Int = -1): Intent =
+        fun updateIntent(context: Context, sessionCode: String, state: String, bpm: Int): Intent =
             Intent(context, AndroidHeartbeatForegroundService::class.java)
                 .setAction(ACTION_UPDATE_STATE)
                 .putExtra(EXTRA_SESSION_CODE, sessionCode)
@@ -148,8 +144,5 @@ class AndroidHeartbeatForegroundService : Service() {
         fun stopIntent(context: Context): Intent =
             Intent(context, AndroidHeartbeatForegroundService::class.java)
                 .setAction(ACTION_STOP)
-
-        fun stopRequestedIntent(packageName: String): Intent =
-            Intent(ACTION_STOP_REQUESTED).setPackage(packageName)
     }
 }
