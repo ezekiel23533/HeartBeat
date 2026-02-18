@@ -19,6 +19,14 @@ Non viene usato un endpoint WebSocket personalizzato nella configurazione attual
 
 Il signaling passa tramite Firebase Realtime Database (SDK Firebase), quindi i messaggi SDP/ICE transitano nel path sessione e non su un tuo `wss://...` dedicato.
 
+## Foreground execution (anti-kill)
+
+È stato aggiunto `AndroidHeartbeatForegroundService`, che avvia una notifica persistente a bassa priorità durante una sessione attiva.
+
+- Canale notifiche dedicato: `heartbeat.session`
+- Azione rapida `Stop` dalla notifica
+- Supporto aggiornamento stato/BPM tramite intent di update
+
 ## Package map
 
 - `com.heartbeaten.ble`: BLE contracts and normalization.
