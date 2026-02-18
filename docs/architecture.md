@@ -10,6 +10,10 @@
 6. Peer connection is negotiated with STUN Google (`stun:stun.l.google.com:19302`).
 7. DataChannel carries heart-rate frames P2P.
 8. Receiver updates `HeartbeatAudioEngine` based on selected `ListenMode`.
+9. `SessionForegroundNotifier` publishes connection/BPM updates to Android foreground notification.
+10. Foreground notification stop action emits a session-stop intent contract for app-layer orchestration.
+11. `AndroidSessionStopActionHandler` can subscribe to this contract and invoke session shutdown.
+12. `AndroidHeartbeatSessionRuntime` wires service + notifier + stop handler for app-layer lifecycle integration.
 
 ## 2) Discovery/signaling
 

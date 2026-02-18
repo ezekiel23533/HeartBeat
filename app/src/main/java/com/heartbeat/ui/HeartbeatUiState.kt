@@ -11,5 +11,7 @@ data class HeartbeatUiState(
     val transportState: TransportState = TransportState.IDLE,
     val currentBpm: Int = 0,
     val canStartSession: Boolean = false,
+    val hasRequiredPermissions: Boolean = false,
+    val shouldRequestPermissions: Boolean = false,
     val errorMessage: String? = null,
 )
