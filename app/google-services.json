@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "522268513604",
+    "project_id": "fir-firebasertc-5e8d0",
+    "storage_bucket": "fir-firebasertc-5e8d0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:522268513604:android:6be977285b9785056ff311",
+        "android_client_info": {
+          "package_name": "com.heartbeaten"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAioWfdffM_oJzMuX4JQKEffw8Ij4NILFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
